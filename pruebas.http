@@ -2,32 +2,38 @@
 GET http://localhost:8080/api/auth/prueba
 
 
-### Registrar usuario
+### Registrar cliente
 POST http://localhost:8080/api/auth/registro
 Content-Type: application/json
 
 {
-  "nombre": "Victor Daniel",
-  "correo": "victor@cafearoma.com",
-  "password": "12345"
+  "nombre": "Test User",
+  "correo": "test@cafearoma.com",
+  "password": "12345",
+  "telefono": "3331234567"
 }
 
 
-### Login correcto
+### Login cliente
 POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
-  "correo": "victor@cafearoma.com",
+  "correo": "test@cafearoma.com",
   "password": "12345"
 }
 
 
-### Login incorrecto
+### Login admin
 POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
-  "correo": "victor@cafearoma.com",
-  "password": "11111"
+  "correo": "admin@cafearoma.com",
+  "password": "Admin12345"
 }
+
+
+### Perfil autenticado
+GET http://localhost:8080/api/auth/perfil
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0QGNhZmVhcm9tYS5jb20iLCJpZFVzdWFyaW8iOjQsIm5vbWJyZSI6IlRlc3QgVXNlciIsInJvbCI6IkNMSUVOVEUiLCJpYXQiOjE3ODUzODcwNzIsImV4cCI6MTc4NTQ3MzQ3Mn0.WyJtA0xuXbQ9HnKS6YdUuktTHgPaetvFt1f1IiSmXjEuFy8r8GW9ugL_l3wOhwlk

@@ -1,54 +1,103 @@
 package com.cafearoma.api.service;
 
+import com.cafearoma.api.dto.AuthResponse;
 import com.cafearoma.api.dto.LoginRequest;
 import com.cafearoma.api.dto.RegistroRequest;
+import com.cafearoma.api.dto.UsuarioResponse;
+import com.cafearoma.api.model.Cliente;
+import com.cafearoma.api.model.Rol;
 import com.cafearoma.api.model.Usuario;
+import com.cafearoma.api.repository.ClienteRepository;
+import com.cafearoma.api.repository.RolRepository;
 import com.cafearoma.api.repository.UsuarioRepository;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final RolRepository rolRepository;
+    private final ClienteRepository clienteRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
-    public AuthService(UsuarioRepository usuarioRepository) {
+    public AuthService(
+            UsuarioRepository usuarioRepository,
+            RolRepository rolRepository,
+            ClienteRepository clienteRepository,
+            PasswordEncoder passwordEncoder,
+            AuthenticationManager authenticationManager,
+            JwtService jwtService
+    ) {
         this.usuarioRepository = usuarioRepository;
+        this.rolRepository = rolRepository;
+        this.clienteRepository = clienteRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
-    // Servicio para registrar un nuevo usuario
-    public String registrarUsuario(RegistroRequest request) {
+    public AuthResponse registrarUsuario(RegistroRequest request) {
 
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
-            return "Error: el correo ya se encuentra registrado.";
+            throw new IllegalArgumentException("El correo ya se encuentra registrado.");
         }
+
+        Rol rolCliente = rolRepository.findByNombre("CLIENTE")
+                .orElseThrow(() -> new IllegalArgumentException("El rol CLIENTE no existe."));
 
         Usuario usuario = new Usuario();
         usuario.setNombre(request.getNombre());
         usuario.setCorreo(request.getCorreo());
-        usuario.setPassword(request.getPassword());
+        usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        usuario.setEstado(true);
+        usuario.setRol(rolCliente);
 
-        usuarioRepository.save(usuario);
+        Usuario usuarioGuardado = usuarioRepository.save(usuario);
 
-        return "Usuario registrado correctamente.";
+        Cliente cliente = new Cliente();
+        cliente.setUsuario(usuarioGuardado);
+        cliente.setTelefono(request.getTelefono());
+
+        clienteRepository.save(cliente);
+
+        String token = jwtService.generarToken(usuarioGuardado);
+
+        UsuarioResponse usuarioResponse = new UsuarioResponse(
+                usuarioGuardado.getIdUsuario(),
+                usuarioGuardado.getNombre(),
+                usuarioGuardado.getCorreo(),
+                usuarioGuardado.getRol().getNombre()
+        );
+
+        return new AuthResponse("Usuario registrado correctamente.", token, usuarioResponse);
     }
 
-    // Servicio para iniciar sesión validando correo y contraseña
-    public String iniciarSesion(LoginRequest request) {
+    public AuthResponse iniciarSesion(LoginRequest request) {
 
-        Optional<Usuario> usuarioEncontrado = usuarioRepository.findByCorreo(request.getCorreo());
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getCorreo(),
+                        request.getPassword()
+                )
+        );
 
-        if (usuarioEncontrado.isEmpty()) {
-            return "Error en la autenticación: usuario no encontrado.";
-        }
+        Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
 
-        Usuario usuario = usuarioEncontrado.get();
+        String token = jwtService.generarToken(usuario);
 
-        if (usuario.getPassword().equals(request.getPassword())) {
-            return "Autenticación satisfactoria. Bienvenido, " + usuario.getNombre() + ".";
-        } else {
-            return "Error en la autenticación: contraseña incorrecta.";
-        }
+        UsuarioResponse usuarioResponse = new UsuarioResponse(
+                usuario.getIdUsuario(),
+                usuario.getNombre(),
+                usuario.getCorreo(),
+                usuario.getRol().getNombre()
+        );
+
+        return new AuthResponse("Autenticación satisfactoria.", token, usuarioResponse);
     }
 }
