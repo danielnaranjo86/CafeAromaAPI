@@ -4,6 +4,7 @@ import com.cafearoma.api.dto.EstadoPedidoRequest;
 import com.cafearoma.api.dto.PedidoResponse;
 import com.cafearoma.api.model.Usuario;
 import com.cafearoma.api.service.PedidoService;
+import com.cafearoma.api.dto.CrearPedidoRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,10 +23,13 @@ public class PedidoController {
     }
 
     @PostMapping("/api/pedidos")
-    public ResponseEntity<?> crearPedido(Authentication authentication) {
+    public ResponseEntity<?> crearPedido(
+            Authentication authentication,
+            @RequestBody(required = false) CrearPedidoRequest request
+    ) {
         try {
             Usuario usuario = (Usuario) authentication.getPrincipal();
-            PedidoResponse response = pedidoService.crearPedidoDesdeCarrito(usuario);
+            PedidoResponse response = pedidoService.crearPedidoDesdeCarrito(usuario, request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("mensaje", e.getMessage()));

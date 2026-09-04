@@ -27,6 +27,10 @@ public class Pedido {
     @Column(name = "total", nullable = false)
     private BigDecimal total;
 
+    @ManyToOne
+    @JoinColumn(name = "id_direccion_envio")
+    private DireccionEnvio direccionEnvio;
+
     public Pedido() {
     }
 
@@ -68,5 +72,13 @@ public class Pedido {
 
     public void setTotal(BigDecimal total) {
         this.total = total;
+    }
+
+    public DireccionEnvio getDireccionEnvio() {
+        return direccionEnvio;
+    }
+
+    public void setDireccionEnvio(DireccionEnvio direccionEnvio) {
+        this.direccionEnvio = direccionEnvio;
     }
 }

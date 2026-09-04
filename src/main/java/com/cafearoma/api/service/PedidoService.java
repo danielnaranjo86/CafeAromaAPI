@@ -3,6 +3,8 @@ package com.cafearoma.api.service;
 import com.cafearoma.api.dto.EstadoPedidoRequest;
 import com.cafearoma.api.dto.PedidoItemResponse;
 import com.cafearoma.api.dto.PedidoResponse;
+import com.cafearoma.api.dto.CrearPedidoRequest;
+import com.cafearoma.api.dto.DireccionEnvioResponse;
 import com.cafearoma.api.model.*;
 import com.cafearoma.api.repository.*;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final DetallePedidoRepository detallePedidoRepository;
     private final ProductoRepository productoRepository;
+    private final DireccionEnvioRepository direccionEnvioRepository;
 
     public PedidoService(
             ClienteRepository clienteRepository,
@@ -29,6 +32,7 @@ public class PedidoService {
             CarritoItemRepository carritoItemRepository,
             PedidoRepository pedidoRepository,
             DetallePedidoRepository detallePedidoRepository,
+            DireccionEnvioRepository direccionEnvioRepository,
             ProductoRepository productoRepository
     ) {
         this.clienteRepository = clienteRepository;
@@ -36,13 +40,15 @@ public class PedidoService {
         this.carritoItemRepository = carritoItemRepository;
         this.pedidoRepository = pedidoRepository;
         this.detallePedidoRepository = detallePedidoRepository;
+        this.direccionEnvioRepository = direccionEnvioRepository;
         this.productoRepository = productoRepository;
     }
 
     @Transactional
-    public PedidoResponse crearPedidoDesdeCarrito(Usuario usuario) {
+    public PedidoResponse crearPedidoDesdeCarrito(Usuario usuario, CrearPedidoRequest request) {
 
         Cliente cliente = obtenerCliente(usuario);
+        DireccionEnvio direccionEnvio = obtenerDireccionEnvio(cliente, request);
 
         Carrito carrito = carritoRepository
                 .findByClienteIdClienteAndEstado(cliente.getIdCliente(), "ACTIVO")
@@ -76,6 +82,7 @@ public class PedidoService {
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado("PENDIENTE");
         pedido.setTotal(total);
+        pedido.setDireccionEnvio(direccionEnvio);
 
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
@@ -170,11 +177,30 @@ public class PedidoService {
                 ))
                 .toList();
 
+        DireccionEnvio direccion = pedido.getDireccionEnvio();
+
+        DireccionEnvioResponse direccionResponse = null;
+
+        if (direccion != null) {
+            direccionResponse = new DireccionEnvioResponse(
+                    direccion.getIdDireccion(),
+                    direccion.getDireccion(),
+                    direccion.getCiudad(),
+                    direccion.getDepartamento(),
+                    direccion.getPais(),
+                    direccion.getCodigoPostal(),
+                    direccion.getReferencia(),
+                    direccion.getPredeterminada(),
+                    direccion.getActiva()
+            );
+        }
+
         return new PedidoResponse(
                 pedido.getIdPedido(),
                 pedido.getFechaPedido(),
                 pedido.getEstado(),
                 pedido.getTotal(),
+                direccionResponse,
                 items
         );
     }
@@ -182,5 +208,21 @@ public class PedidoService {
     private Cliente obtenerCliente(Usuario usuario) {
         return clienteRepository.findByUsuarioIdUsuario(usuario.getIdUsuario())
                 .orElseThrow(() -> new IllegalArgumentException("El usuario autenticado no tiene perfil de cliente."));
+    }
+
+    private DireccionEnvio obtenerDireccionEnvio(Cliente cliente, CrearPedidoRequest request) {
+
+        if (request != null && request.getIdDireccionEnvio() != null) {
+            return direccionEnvioRepository
+                    .findByIdDireccionAndClienteIdClienteAndActivaTrue(
+                            request.getIdDireccionEnvio(),
+                            cliente.getIdCliente()
+                    )
+                    .orElseThrow(() -> new IllegalArgumentException("Dirección de envío no encontrada."));
+        }
+
+        return direccionEnvioRepository
+                .findByClienteIdClienteAndPredeterminadaTrueAndActivaTrue(cliente.getIdCliente())
+                .orElseThrow(() -> new IllegalArgumentException("Debes registrar una dirección de envío antes de crear el pedido."));
     }
 }
