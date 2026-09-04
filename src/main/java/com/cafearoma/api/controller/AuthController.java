@@ -6,6 +6,10 @@ import com.cafearoma.api.dto.RegistroRequest;
 import com.cafearoma.api.dto.UsuarioResponse;
 import com.cafearoma.api.model.Usuario;
 import com.cafearoma.api.service.AuthService;
+import com.cafearoma.api.dto.ActualizarPerfilRequest;
+import com.cafearoma.api.dto.CambiarPasswordRequest;
+import com.cafearoma.api.dto.PerfilResponse;
+import com.cafearoma.api.service.PerfilService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,9 +22,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final PerfilService perfilService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, PerfilService perfilService) {
         this.authService = authService;
+        this.perfilService = perfilService;
     }
 
     @GetMapping("/prueba")
@@ -55,16 +61,50 @@ public class AuthController {
     }
 
     @GetMapping("/perfil")
-    public ResponseEntity<UsuarioResponse> perfil(Authentication authentication) {
-        Usuario usuario = (Usuario) authentication.getPrincipal();
+    public ResponseEntity<?> perfil(Authentication authentication) {
+        try {
+            Usuario usuario = (Usuario) authentication.getPrincipal();
+            PerfilResponse response = perfilService.obtenerPerfil(usuario);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("mensaje", e.getMessage())
+            );
+        }
+    }
 
-        UsuarioResponse response = new UsuarioResponse(
-                usuario.getIdUsuario(),
-                usuario.getNombre(),
-                usuario.getCorreo(),
-                usuario.getRol().getNombre()
-        );
+    @PutMapping("/perfil")
+    public ResponseEntity<?> actualizarPerfil(
+            Authentication authentication,
+            @RequestBody ActualizarPerfilRequest request
+    ) {
+        try {
+            Usuario usuario = (Usuario) authentication.getPrincipal();
+            PerfilResponse response = perfilService.actualizarPerfil(usuario, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("mensaje", e.getMessage())
+            );
+        }
+    }
 
-        return ResponseEntity.ok(response);
+    @PutMapping("/cambiar-password")
+    public ResponseEntity<?> cambiarPassword(
+            Authentication authentication,
+            @RequestBody CambiarPasswordRequest request
+    ) {
+        try {
+            Usuario usuario = (Usuario) authentication.getPrincipal();
+            perfilService.cambiarPassword(usuario, request);
+
+            return ResponseEntity.ok(
+                    Map.of("mensaje", "Contraseña actualizada correctamente.")
+            );
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("mensaje", e.getMessage())
+            );
+        }
     }
 }
