@@ -37,3 +37,19 @@ Content-Type: application/json
 ### Perfil autenticado
 GET http://localhost:8080/api/auth/perfil
 Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0QGNhZmVhcm9tYS5jb20iLCJpZFVzdWFyaW8iOjQsIm5vbWJyZSI6IlRlc3QgVXNlciIsInJvbCI6IkNMSUVOVEUiLCJpYXQiOjE3ODUzODcwNzIsImV4cCI6MTc4NTQ3MzQ3Mn0.WyJtA0xuXbQ9HnKS6YdUuktTHgPaetvFt1f1IiSmXjEuFy8r8GW9ugL_l3wOhwlk
+
+### Prueba del servicio
+GET http://localhost:8080/api/auth/prueba
+
+
+### Listar productos públicos
+GET http://localhost:8080/api/productos
+
+
+### Listar categorías públicas
+GET http://localhost:8080/api/categorias
+
+
+### Perfil autenticado
+GET http://localhost:8080/api/auth/perfil
+Authorization: Bearer PEGA_AQUI_EL_TOKEN
